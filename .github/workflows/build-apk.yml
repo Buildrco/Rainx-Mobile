@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+env:
+  EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+
 jobs:
   build-apk:
     runs-on: ubuntu-latest
@@ -18,30 +21,48 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Generate Android project
-        run: npx expo prebuild --platform android --non-interactive
+      - name: Validate EAS update configuration
+        run: |
+          test -n "$EAS_PROJECT_ID" || {
+            echo "Missing GitHub Actions variable: EAS_PROJECT_ID"
+            exit 1
+          }
+
+          npx expo config --type public > /tmp/rainx-expo-config.json
+
+          node - <<'NODE'
+          const config = require('/tmp/rainx-expo-config.json');
+
+          if (!config.updates?.url || !config.extra?.eas?.projectId) {
+            throw new Error(
+              'Expo config is missing updates.url or extra.eas.projectId'
+            );
+          }
+          NODE
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
 
-      - name: Build debug APK
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --non-interactive
+
+      - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RainX-Android-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
