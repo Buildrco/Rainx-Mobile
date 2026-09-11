@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+env:
+  EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+
 jobs:
   publish-ota:
     runs-on: ubuntu-latest
@@ -18,18 +21,37 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Setup Expo
-        run: npx expo install expo-updates
+      - name: Validate EAS update configuration
+        run: |
+          test -n "$EAS_PROJECT_ID" || {
+            echo "Missing GitHub Actions variable: EAS_PROJECT_ID"
+            exit 1
+          }
+
+          npx expo config --type public > /tmp/rainx-expo-config.json
+
+          node - <<'NODE'
+          const config = require('/tmp/rainx-expo-config.json');
+
+          if (!config.updates?.url || !config.extra?.eas?.projectId) {
+            throw new Error(
+              'Expo config is missing updates.url or extra.eas.projectId'
+            );
+          }
+          NODE
 
       - name: Publish OTA update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npx eas update --branch production --message "RainX OTA update" --non-interactive
+        run: |
+          npx eas update \
+            --branch production \
+            --message "RainX OTA update" \
+            --non-interactive
