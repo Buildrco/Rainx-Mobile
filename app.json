@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "RainX",
+    "slug": "rainx",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "rainx",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.rainx.app",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.rainx.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#F4D35E",
+        "foregroundImage": "./assets/rainx-logo-transparent.png"
+      },
+      "permissions": [
+        "POST_NOTIFICATIONS",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/rainx-logo-transparent.png",
+          "color": "#F4D35E"
+        }
+      ],
+      "expo-secure-store",
+      "expo-local-authentication"
+    ],
+    "assetBundlePatterns": [
+      "assets/**/*"
+    ]
+  }
+}
