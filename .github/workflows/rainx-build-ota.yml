@@ -1,0 +1,77 @@
+name: RainX OTA Update
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+env:
+  EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+  CI: "1"
+
+jobs:
+  publish-ota:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Install Expo Babel preset
+        run: npx expo install babel-preset-expo
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Install EAS CLI
+        run: npm install --global eas-cli
+
+      - name: Check Expo login
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas whoami
+
+      - name: Verify Expo project config
+        run: |
+          node - <<'NODE'
+          const config = require('./app.config.js');
+          const projectId = config.extra?.eas?.projectId;
+          if (!projectId) {
+            console.error('EAS project ID is missing from the resolved Expo config.');
+            process.exit(1);
+          }
+          console.log(JSON.stringify({
+            projectId,
+            updatesUrl: config.updates?.url,
+            updatesEnabled: config.updates?.enabled,
+            runtimeVersion: config.runtimeVersion
+          }, null, 2));
+          NODE
+
+      - name: Publish OTA update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          set -o pipefail
+          eas update \
+            --branch production \
+            --platform android \
+            --message "RainX OTA update" \
+            --non-interactive 2>&1 | tee eas-update.log
+
+      - name: Upload EAS update log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eas-update-log
+          path: eas-update.log
+          if-no-files-found: warn
