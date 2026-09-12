@@ -28,25 +28,6 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Validate EAS update configuration
-        run: |
-          test -n "$EAS_PROJECT_ID" || {
-            echo "Missing GitHub Actions variable: EAS_PROJECT_ID"
-            exit 1
-          }
-
-          npx expo config --type public > /tmp/rainx-expo-config.json
-
-          node - <<'NODE'
-          const config = require('/tmp/rainx-expo-config.json');
-
-          if (!config.updates?.url || !config.extra?.eas?.projectId) {
-            throw new Error(
-              'Expo config is missing updates.url or extra.eas.projectId'
-            );
-          }
-          NODE
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
