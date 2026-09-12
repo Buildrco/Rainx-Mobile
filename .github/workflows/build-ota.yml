@@ -6,9 +6,6 @@ on:
     branches:
       - main
 
-env:
-  EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
-
 jobs:
   publish-ota:
     runs-on: ubuntu-latest
@@ -27,6 +24,11 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      - name: Create or link Expo EAS project
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx eas init --non-interactive --force
 
       - name: Publish OTA update
         env:
