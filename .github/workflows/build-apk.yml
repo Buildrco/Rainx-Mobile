@@ -8,6 +8,7 @@ on:
 
 env:
   EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+  CI: "1"
 
 jobs:
   build-apk:
@@ -28,22 +29,53 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
+      - name: Install EAS CLI
+        run: npm install --global eas-cli
 
-      - name: Generate Android project
-        run: npx expo prebuild --platform android --non-interactive
+      - name: Check Expo login
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas whoami
 
-      - name: Build release APK
-        working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+      - name: Build release APK with EAS
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform android --profile production --non-interactive --wait --json > eas-build.json
+
+      - name: Download APK
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+
+          const payload = JSON.parse(
+            fs.readFileSync("eas-build.json", "utf8")
+          );
+
+          const build = Array.isArray(payload) ? payload[0] : payload;
+          const url =
+            build &&
+            build.artifacts &&
+            build.artifacts.buildUrl;
+
+          if (!url) {
+            console.error("EAS completed without an APK URL.");
+            console.error(JSON.stringify(payload, null, 2));
+            process.exit(1);
+          }
+
+          fs.writeFileSync("eas-build-url.txt", url);
+          NODE
+
+          curl \
+            --fail \
+            --location \
+            --retry 3 \
+            "$(cat eas-build-url.txt)" \
+            --output RainX-Android-APK.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: RainX-Android-APK
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: RainX-Android-APK.apk
           if-no-files-found: error
