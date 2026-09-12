@@ -25,16 +25,19 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Install EAS CLI
+        run: npm install --global eas-cli
+
       - name: Create or link Expo EAS project
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npx eas init --non-interactive --force
+        run: eas init --non-interactive --force
 
       - name: Publish OTA update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          npx eas update \
+          eas update \
             --branch production \
             --message "RainX OTA update" \
             --non-interactive
